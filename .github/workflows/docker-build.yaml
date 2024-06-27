@@ -41,7 +41,7 @@ jobs:
           max_attempts: 1
           retry_wait_seconds: 15
           command:  |
-            docker build . -t $IMAGE_NAME 
+            docker pull $IMAGE_NAME:latest && docker build . -t $IMAGE_NAME 
       - name: Push image
         uses: nick-fields/retry@v2
         with:
