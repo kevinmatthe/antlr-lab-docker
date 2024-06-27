@@ -11,7 +11,7 @@ on:
         default: "手动触发"
 
 env:
-  IMAGE_NAME: kevinmatthe/antlr4-lab
+  IMAGE_NAME: kevinmatt/antlr4-lab
   REGISTRY: ghcr.io
 jobs:
   Build_Push:
@@ -41,7 +41,6 @@ jobs:
       - name: Build image
         uses: nick-fields/retry@v2
         with:
-          timeout_minutes: 10
           max_attempts: 1
           retry_wait_seconds: 15
           command:  |
