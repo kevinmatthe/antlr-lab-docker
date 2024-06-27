@@ -11,7 +11,7 @@ on:
         default: "手动触发"
 
 env:
-  IMAGE_NAME: kevinmatt/antlr4-lab
+  IMAGE_NAME: kevinmatthe/antlr4-lab
   REGISTRY: ghcr.io
 jobs:
   Build_Push:
@@ -34,6 +34,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Pull & update submodules recursively
+        run: |
+          git submodule update --init --recursive
+          git submodule update --recursive --remote
       - name: Build image
         uses: nick-fields/retry@v2
         with:
