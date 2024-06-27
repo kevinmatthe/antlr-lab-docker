@@ -1,0 +1,85 @@
+name: Antlr4Lab
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "触发用途"
+        required: true
+        default: "手动触发"
+
+env:
+  IMAGE_NAME: kevinmatt/antlr4-lab
+  REGISTRY: ghcr.io
+jobs:
+  Build_Push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log into registry
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: | 
+            echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login -u kevinmatt --password-stdin
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build image
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command:  |
+            DOCKER_BUILDKIT=1 docker build \
+             . \
+             --tag $IMAGE_NAME
+      - name: Push image
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command:  |
+            current=`date "+%Y-%m-%d %H:%M:%S"`
+            timeStamp=`date -d "$current" +%s` 
+            #将current转换为时间戳，精确到毫秒  
+            currentTimeStamp=$((timeStamp*1000+`date "+%N"`/1000000)) 
+
+            IMAGE_ID=$IMAGE_NAME
+            
+            # 将所有的大写字母转为小写
+            IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+            # 从 tag 名字中替换 v 字符
+            [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+            # 设置镜像 id 和版本号
+            docker tag $IMAGE_NAME $IMAGE_NAME:latest
+            
+            # 进行 push
+            docker push $IMAGE_NAME:latest
+            docker tag $IMAGE_NAME:latest $IMAGE_NAME:latest-$currentTimeStamp
+            docker push $IMAGE_NAME:latest-$currentTimeStamp
+
+            # docker tag $IMAGE_NAME:latest $TENCENT_HEADER/$IMAGE_NAME:latest 
+            # docker push $TENCENT_HEADER/$IMAGE_NAME:latest
+            # docker tag $TENCENT_HEADER/$IMAGE_NAME:latest $TENCENT_HEADER/$IMAGE_NAME:latest-$currentTimeStamp
+            # docker push $TENCENT_HEADER/$IMAGE_NAME:latest-$currentTimeStamp
+      - name: Gotify Notification
+        uses: eikendev/gotify-action@master
+        with:
+          gotify_api_base: '${{ secrets.GOTIFY_URL }}'
+          gotify_app_token: '${{ secrets.GOTIFY_APP_TOKEN }}'
+          notification_title: '${{ env.ROBOT_NAME }} Build Complete'
+          notification_message: 'Your build was completed.'
